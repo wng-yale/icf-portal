@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICF Project Portal</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ICF Portal">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'SF Pro Display', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 30px;
+    padding-top: env(safe-area-inset-top, 30px);
+    padding-bottom: env(safe-area-inset-bottom, 30px);
+    padding-left: env(safe-area-inset-left, 30px);
+    padding-right: env(safe-area-inset-right, 30px);
+  }
+  @media (max-width: 500px) {
+    body { padding: 16px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.8em;
+    font-weight: 300;
+    letter-spacing: 2px;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 0.9em;
+    color: #888;
+    margin-bottom: 30px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  @media (max-width: 500px) {
+    .grid { grid-template-columns: 1fr; gap: 14px; }
+    h1 { font-size: 1.4em; }
+  }
+  .card {
+    background: #16213e;
+    border-radius: 10px;
+    border: 1px solid #0f3460;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+  .card-header {
+    padding: 18px 20px 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-header h2 {
+    font-size: 1.15em;
+    font-weight: 600;
+    color: #e94560;
+  }
+  .chevron {
+    font-size: 0.8em;
+    color: #666;
+    transition: transform 0.2s;
+  }
+  .card.open .chevron { transform: rotate(180deg); }
+  .card-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 20px;
+  }
+  .card.open .card-body {
+    max-height: 600px;
+    padding: 0 20px 12px;
+  }
+  .card-body p {
+    font-size: 0.85em;
+    line-height: 1.55;
+    color: #aaa;
+    margin-bottom: 8px;
+  }
+  .card-actions {
+    padding: 0 20px 18px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .btn-launch {
+    display: inline-block;
+    padding: 10px 22px;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-launch:hover { background: #c73652; }
+  .btn-companion {
+    display: inline-block;
+    padding: 10px 18px;
+    background: transparent;
+    color: #5393d9;
+    border: 1px solid #5393d9;
+    border-radius: 6px;
+    font-size: 0.85em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-companion:hover { background: #5393d9; color: #fff; }
+  .url-display {
+    font-size: 0.75em;
+    color: #556;
+    padding: 4px 20px 0;
+    word-break: break-all;
+  }
+
+  /* Modal overlay */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 28px 32px;
+    min-width: 320px;
+    max-width: 90vw;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+  .modal h3 {
+    color: #e94560;
+    font-size: 1.1em;
+    margin-bottom: 16px;
+  }
+  .modal .pw-field {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 1.2em;
+    font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+    letter-spacing: 1px;
+    text-align: center;
+    background: #1a1a2e;
+    color: #fff;
+    border: 1px solid #0f3460;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: text;
+  }
+  .modal .pw-field:focus { outline: 2px solid #e94560; }
+  .modal .hint {
+    font-size: 0.8em;
+    color: #888;
+    margin-bottom: 18px;
+  }
+  .modal .hint.error { color: #e94560; }
+  .modal .btn-go {
+    display: inline-block;
+    padding: 12px 32px;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+    margin-right: 10px;
+  }
+  .modal .btn-go:hover { background: #c73652; }
+  .modal .btn-cancel {
+    padding: 12px 20px;
+    background: transparent;
+    color: #888;
+    border: 1px solid #444;
+    border-radius: 6px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .modal .btn-cancel:hover { background: #222; }
+  .modal .btn-copy {
+    display: inline-block;
+    padding: 8px 16px;
+    background: transparent;
+    color: #5393d9;
+    border: 1px solid #5393d9;
+    border-radius: 6px;
+    font-size: 0.85em;
+    cursor: pointer;
+    margin-bottom: 14px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .modal .btn-copy:hover { background: #5393d9; color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>ICF Project Portal</h1>
+<p class="subtitle">Click Launch to see the password and open the site</p>
+
+<div class="grid">
+
+  <!-- Structure of London Financial News -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <h2>Structure of London Financial News</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="card-body">
+      <p>News drives financial markets. The ICF is gathering key financial news databases and building AI analytical structures with the OCR data for research into key episodes in financial history.</p>
+      <p>Currently we have a near-complete corpus of text and embeddings for the Financial Times from 1888-2008, the Economist's Investors Monthly Manual from 1864-1930 and the Statist 1880-1930. These comprise more than 5 million pages of text and form the core of an engine to study the evolution of financial news journalism over 150 years.</p>
+    </div>
+    <div class="url-display">wng-yale.github.io/structure-london-financial-news</div>
+    <div class="card-actions">
+      <button class="btn-launch" onclick="launch('https://wng-yale.github.io/structure-london-financial-news/#about','4BCCDn/vgO6i8asJVdp1CcQa4W8RdnY/4Ieq51/41gna15izhx+lSlAyoJGbd13RWpPT')">Launch</button>
+      <button class="btn-companion" onclick="launch('https://wng-yale.github.io/imm-ngrams/',null)">IMM N-gram Viewer</button>
+    </div>
+  </div>
+
+  <!-- Money Markets -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <h2>Money Markets</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="card-body">
+      <p>This project brings together all available information about the world's stock, bond and commodity exchanges, as well as their historical and ancient antecedents. It is an encyclopedic resource for the study and exploration of the origins, development, impact, evolution and transformation of financial markets.</p>
+      <p>It is the work of a team of Yale students over the year 2025-6 and the basis for a book project to bring art historians, architects, economists and others together to produce an illustrated volume like the Origins of Value or The Great Mirror of Folly.</p>
+    </div>
+    <div class="url-display">wng-yale.github.io/money-markets</div>
+    <div class="card-actions">
+      <button class="btn-launch" onclick="launch('https://wng-yale.github.io/money-markets/','qJKYKUtlObst1xbOkd2xIC5mDkD8t8mIWM7rh2pQM/zz5weOoNoDyoB1YhO1e5h+2e7Z7YXcxF3aIsPl')">Launch</button>
+    </div>
+  </div>
+
+  <!-- Structure of Russian Financial News -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <h2>Structure of Russian Financial News</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="card-body">
+      <p>A companion to The Structure of London Financial News, applying the same computational-history toolkit to the imperial Russian financial press. Built around a digitized run of Vestnik Finansov, Promyshlennosti i Torgovli &mdash; the official weekly of the Russian Ministry of Finance, published in St. Petersburg from 1883 to 1917.</p>
+      <p>Roughly 77,510 OCR'd pages and 62 million words spanning 1869 to 1916. Features bilingual English&ndash;Russian search, NMF topic model, hierarchical taxonomy dendrogram, monthly topic prevalence, and Procrustes-aligned diachronic FastText embeddings for Cyrillic OCR.</p>
+    </div>
+    <div class="url-display">wng-yale.github.io/structure-russian-financial-news</div>
+    <div class="card-actions">
+      <button class="btn-launch" onclick="launch('https://wng-yale.github.io/structure-russian-financial-news/','FOD0ABGstjGQSiNy+XitVRIN9yg2eirpTGrz4DQLIaeENXSP/ZrQ8nHza4D5c1DfbMVmBsKuP2cv')">Launch</button>
+    </div>
+  </div>
+
+  <!-- Dow Theory / Hamilton Agent -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <h2>Dow Theory &mdash; Hamilton Agent</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="card-body">
+      <p>The Hamilton agent operates daily. Each US trading day after the close, the agent ingests current market indicators and retrieves the four 1903&ndash;1929 Hamilton editorials whose market state is most similar to today's by FEVA distance. Claude Opus writes a Hamilton-voiced editorial diagnosing the primary trend, secondary movement, and rails-industrials confirmation.</p>
+      <p>Six reader-archetype rules translate the structured diagnosis into daily long-DJI position weights. A scoreboard reports each archetype's running performance under Sharpe, Sortino, max drawdown, MPPM, and the Henriksson-Merton timing coefficient. The site is regenerated from an audit-trail JSONL and republished automatically by GitHub Actions.</p>
+    </div>
+    <div class="url-display">wng-yale.github.io/hamilton-agent</div>
+    <div class="card-actions">
+      <button class="btn-launch" onclick="launch('https://wng-yale.github.io/hamilton-agent/','wwz1ur4T8dNOTwht8KS7z3phYFc9/+8GDlc5SPu9JsacTkNF7QZ3wApPuWYl56nG/G6pgw==')">Launch</button>
+    </div>
+  </div>
+
+  <!-- IMM N-gram Viewer -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <h2>IMM N-gram Viewer</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="card-body">
+      <p>An interactive n-gram viewer for exploring word frequency trends in the Investor's Monthly Manual, 1864&ndash;1930. A companion tool to the Structure of London Financial News project, enabling researchers to trace the rise and fall of financial terminology, company names, and economic concepts across nearly seven decades of the premier Victorian and Edwardian investment periodical.</p>
+    </div>
+    <div class="url-display">wng-yale.github.io/imm-ngrams</div>
+    <div class="card-actions">
+      <button class="btn-launch" onclick="launch('https://wng-yale.github.io/imm-ngrams/',null)">Launch</button>
+    </div>
+  </div>
+
+  <!-- Shiller Investor Survey Dashboard -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <h2>Shiller Investor Survey Dashboard</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="card-body">
+      <p>Interactive dashboard for the Shiller Individual Investor Survey, a long-running Yale School of Management project tracking investor beliefs, expectations, and confidence. Based on questionnaire survey data collected since 1989 under the direction of Professor Robert Shiller and the Yale International Center for Finance.</p>
+    </div>
+    <div class="url-display">wng-yale.github.io/shiller-survey-dashboard</div>
+    <div class="card-actions">
+      <button class="btn-launch" onclick="launch('https://wng-yale.github.io/shiller-survey-dashboard/','1RwXkZ3oxEKp+uedaGAj9G46Rh9XrhFBko0uI4A329n05tIaj78ZSliAsv1LzY7aUeSjrkvvvQ58hCc=')">Launch</button>
+    </div>
+  </div>
+
+  <!-- Shiller U.S. Stock Market Confidence Indices -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <h2>Shiller U.S. Confidence Indices</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="card-body">
+      <p>The U.S. Stock Market Confidence Indices, based on monthly survey data collected since 1989 by the Yale International Center for Finance. Reports raw monthly results from samples of wealthy individual investors and institutional investors, covering crash confidence, valuation confidence, buy-on-dips confidence, and one-year confidence.</p>
+    </div>
+    <div class="url-display">yale-icf.github.io/ShillerUSConfidence</div>
+    <div class="card-actions">
+      <button class="btn-launch" onclick="launch('https://yale-icf.github.io/ShillerUSConfidence/',null)">Launch</button>
+    </div>
+  </div>
+
+  <!-- Origins of Value Virtual Museum -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <h2>Origins of Value &mdash; Virtual Museum</h2>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="card-body">
+      <p>Virtual museum companion to Origins of Value, presenting historical financial instruments and artifacts in an interactive online exhibition.</p>
+    </div>
+    <div class="url-display">yale-icf.github.io/oov-virtual-museum02</div>
+    <div class="card-actions">
+      <button class="btn-launch" onclick="launch('https://yale-icf.github.io/oov-virtual-museum02/index.html','viI5FK/wY4MS5wRzSUCqqt2ibOzW9KISJcjB14f+Gzc9ryafit7id8p81SHbg2CtoQy/KA==')">Launch</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Master password modal -->
+<div class="modal-overlay" id="master-modal">
+  <div class="modal">
+    <h3>Enter Portal Password</h3>
+    <input class="pw-field" id="master-pw" type="password" placeholder="Master password" autocomplete="off">
+    <p class="hint" id="master-hint">Enter the portal password to unlock site credentials</p>
+    <div>
+      <button class="btn-go" onclick="submitMasterPassword()">Unlock</button>
+      <button class="btn-cancel" onclick="closeMasterModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Site password modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Password</h3>
+    <input class="pw-field" id="modal-pw" type="text" readonly onclick="this.select()">
+    <div><button class="btn-copy" onclick="copyPassword()">Copy Password</button></div>
+    <p class="hint" id="modal-hint">Tap Copy, then open the site</p>
+    <div>
+      <a class="btn-go" id="modal-go" href="#" target="_blank">Open Site</a>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var pendingUrl = null;
+var pendingEncrypted = null;
+var cachedMaster = null;
+
+function toggleCard(header) {
+  header.parentElement.classList.toggle('open');
+}
+
+async function decryptPassword(encryptedB64, masterPw) {
+  var raw = atob(encryptedB64);
+  var data = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) data[i] = raw.charCodeAt(i);
+
+  var salt = data.slice(0, 16);
+  var iv = data.slice(16, 28);
+  var ciphertext = data.slice(28);
+
+  var keyMaterial = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(masterPw), 'PBKDF2', false, ['deriveKey']
+  );
+  var key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+  var decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: iv },
+    key,
+    ciphertext
+  );
+  return new TextDecoder().decode(decrypted);
+}
+
+function launch(url, encryptedPassword) {
+  if (encryptedPassword) {
+    pendingUrl = url;
+    pendingEncrypted = encryptedPassword;
+    if (cachedMaster) {
+      doDecryptAndShow();
+    } else {
+      var masterModal = document.getElementById('master-modal');
+      var masterPw = document.getElementById('master-pw');
+      var hint = document.getElementById('master-hint');
+      hint.textContent = 'Enter the portal password to unlock site credentials';
+      hint.classList.remove('error');
+      masterPw.value = '';
+      masterModal.classList.add('visible');
+      setTimeout(function() { masterPw.focus(); }, 50);
+    }
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+async function doDecryptAndShow() {
+  try {
+    var pw = await decryptPassword(pendingEncrypted, cachedMaster);
+    showSitePassword(pw, pendingUrl);
+  } catch (e) {
+    cachedMaster = null;
+    var masterModal = document.getElementById('master-modal');
+    var masterPw = document.getElementById('master-pw');
+    var hint = document.getElementById('master-hint');
+    hint.textContent = 'Incorrect password. Please try again.';
+    hint.classList.add('error');
+    masterPw.value = '';
+    masterModal.classList.add('visible');
+    setTimeout(function() { masterPw.focus(); }, 50);
+  }
+}
+
+function submitMasterPassword() {
+  var masterPw = document.getElementById('master-pw').value;
+  if (!masterPw) return;
+  cachedMaster = masterPw;
+  document.getElementById('master-modal').classList.remove('visible');
+  doDecryptAndShow();
+}
+
+function closeMasterModal() {
+  document.getElementById('master-modal').classList.remove('visible');
+  pendingUrl = null;
+  pendingEncrypted = null;
+}
+
+function showSitePassword(password, url) {
+  var modal = document.getElementById('modal');
+  var pwField = document.getElementById('modal-pw');
+  var goBtn = document.getElementById('modal-go');
+  pwField.value = password;
+  goBtn.href = url;
+  modal.classList.add('visible');
+  setTimeout(function() { pwField.select(); }, 50);
+}
+
+function copyPassword() {
+  var pw = document.getElementById('modal-pw').value;
+  var hint = document.getElementById('modal-hint');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(pw).then(function() {
+      hint.textContent = 'Copied!';
+      setTimeout(function() { hint.textContent = 'Tap Copy, then open the site'; }, 1500);
+    });
+  } else {
+    var field = document.getElementById('modal-pw');
+    field.select();
+    document.execCommand('copy');
+    hint.textContent = 'Copied!';
+    setTimeout(function() { hint.textContent = 'Tap Copy, then open the site'; }, 1500);
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('visible');
+  document.getElementById('modal-hint').textContent = 'Tap Copy, then open the site';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal();
+    closeMasterModal();
+  }
+  if (e.key === 'Enter' && document.getElementById('master-modal').classList.contains('visible')) {
+    submitMasterPassword();
+  }
+});
+
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+document.getElementById('master-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeMasterModal();
+});
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+
+</body>
+</html>
